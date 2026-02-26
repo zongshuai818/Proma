@@ -29,13 +29,17 @@ export function MigrationSuggestionCard(): React.ReactElement | null {
     })
   }
 
-  /** 接受建议，执行迁移 */
-  const accept = (): void => {
-    migrate({
-      conversationId: currentConversationId,
-      taskSummary: suggestion.taskSummary,
-    })
-    dismiss()
+  /** 接受建议，执行迁移（成功后才清除建议） */
+  const accept = async (): Promise<void> => {
+    try {
+      await migrate({
+        conversationId: currentConversationId,
+        taskSummary: suggestion.taskSummary,
+      })
+      dismiss()
+    } catch {
+      // 迁移失败时保留建议卡片，toast 已在 hook 中处理
+    }
   }
 
   return (

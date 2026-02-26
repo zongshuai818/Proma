@@ -94,6 +94,20 @@ function migrateHistoryToAgent(sessionId: string, messages: ChatMessage[]): void
 }
 
 /**
+ * 添加迁移提示消息
+ */
+function addMigrationNotice(sessionId: string): void {
+  const noticeMsg: AgentMessage = {
+    id: randomUUID(),
+    role: 'assistant',
+    content: '🔄 已从 Chat 模式迁移。你可以使用 Agent 工具（文件操作、命令执行等）继续完成这个任务。',
+    createdAt: Date.now(),
+    model: undefined,
+  }
+  appendAgentMessage(sessionId, noticeMsg)
+}
+
+/**
  * 执行 Chat → Agent 迁移
  *
  * 1. 读取对话元数据和消息
@@ -135,12 +149,13 @@ export async function migrateToAgent(
   // 6. 将 Chat 历史逐条保存到 Agent 会话
   migrateHistoryToAgent(session.id, validMessages)
 
-  // 7. 构建用户继续对话的提示
+  // 7. 添加迁移提示消息
+  addMigrationNotice(session.id)
+
+  // 8. 构建用户继续对话的提示
   const followUpPrompt = taskSummary
     ? taskSummary
     : '请继续上面的对话，帮我完成这个任务。'
-
-  console.log(`[迁移] Chat ${conversationId} → Agent ${session.id}，迁移消息 ${validMessages.length} 条`)
 
   return {
     sessionId: session.id,

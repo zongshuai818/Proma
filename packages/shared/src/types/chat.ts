@@ -368,7 +368,7 @@ export interface MigrateToAgentInput {
 export interface MigrateToAgentResult {
   /** 新创建的 Agent 会话 ID */
   sessionId: string
-  /** 构建好的上下文 prompt（含 conversation_history XML） */
+  /** 构建好的上下文 prompt（用于 Agent 会话的首条发送消息） */
   contextPrompt: string
   /** 会话标题（继承自 Chat） */
   title: string
