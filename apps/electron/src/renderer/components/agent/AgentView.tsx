@@ -874,6 +874,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
               collapsible
               workspacePath={sessionPath}
               attachedDirs={attachedDirs}
+              attachedFiles={attachedFiles}
             />
 
             {/* Footer 工具栏 */}

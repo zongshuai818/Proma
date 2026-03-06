@@ -544,7 +544,7 @@ export interface FileEntry {
 export interface FileIndexEntry {
   /** 文件/目录名称 */
   name: string
-  /** 相对于工作区的路径 */
+  /** 路径（工作区内为相对路径；附加单文件可能为绝对路径） */
   path: string
   /** 条目类型 */
   type: 'file' | 'dir'

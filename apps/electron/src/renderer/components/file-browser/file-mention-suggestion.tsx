@@ -18,11 +18,13 @@ import type { FileIndexEntry } from '@proma/shared'
  * @param workspacePathRef 当前工作区根路径引用
  * @param mentionActiveRef 是否正在 mention 模式（用于阻止 Enter 发送消息）
  * @param attachedDirsRef 附加目录路径列表引用（搜索时一并扫描）
+ * @param attachedFilesRef 附加文件路径列表引用（搜索时一并扫描）
  */
 export function createFileMentionSuggestion(
   workspacePathRef: React.RefObject<string | null>,
   mentionActiveRef: React.MutableRefObject<boolean>,
   attachedDirsRef?: React.RefObject<string[]>,
+  attachedFilesRef?: React.RefObject<string[]>,
 ): Omit<SuggestionOptions<FileIndexEntry>, 'editor'> {
   return {
     char: '@',
@@ -34,7 +36,10 @@ export function createFileMentionSuggestion(
       if (!wsPath) return []
 
       try {
-        const additionalPaths = attachedDirsRef?.current ?? []
+        const additionalPaths = [
+          ...(attachedDirsRef?.current ?? []),
+          ...(attachedFilesRef?.current ?? []),
+        ]
         const result = await window.electronAPI.searchWorkspaceFiles(
           wsPath,
           query ?? '',

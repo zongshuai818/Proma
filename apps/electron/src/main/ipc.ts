@@ -1328,12 +1328,12 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 搜索工作区文件（用于 @ 引用，递归扫描，支持附加目录）
+  // 搜索工作区文件（用于 @ 引用，递归扫描，支持附加目录/文件）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SEARCH_WORKSPACE_FILES,
     async (_, rootPath: string, query: string, limit = 20, additionalPaths?: string[]): Promise<FileSearchResult> => {
-      const { readdirSync } = await import('node:fs')
-      const { resolve, relative } = await import('node:path')
+      const { readdirSync, statSync } = await import('node:fs')
+      const { resolve, relative, basename } = await import('node:path')
 
       const safeRoot = resolve(rootPath)
       const ignoreDirs = new Set(['node_modules', '.git', 'dist', '.next', '__pycache__', '.venv', 'build', '.cache'])
@@ -1368,11 +1368,28 @@ export function registerIpcHandlers(): void {
 
       scan(safeRoot, 0, safeRoot)
 
-      // 扫描附加目录（外部路径）
+      // 扫描附加目录/文件（外部路径）
       if (additionalPaths && additionalPaths.length > 0) {
         for (const addPath of additionalPaths) {
-          const addRoot = resolve(addPath)
-          scan(addRoot, 0, addRoot)
+          const resolvedPath = resolve(addPath)
+          try {
+            const stat = statSync(resolvedPath)
+            if (stat.isDirectory()) {
+              scan(resolvedPath, 0, resolvedPath)
+              continue
+            }
+
+            if (stat.isFile()) {
+              allEntries.push({
+                name: basename(resolvedPath),
+                // 单文件引用需传绝对路径，确保 SDK 可直接定位
+                path: resolvedPath,
+                type: 'file',
+              })
+            }
+          } catch {
+            // 忽略不存在或无权限的附加路径
+          }
         }
       }
 
