@@ -114,7 +114,9 @@ function htmlToMarkdown(html: string): string {
         // Mention 节点：转换为 @file:路径 格式
         if (el.getAttribute('data-type') === 'mention') {
           const filePath = el.getAttribute('data-id') || ''
-          return `@file:${filePath}`
+          // 使用引号包裹路径，避免路径中空格导致发送后渲染截断
+          const escapedPath = filePath.replace(/"/g, '\\"')
+          return `@file:"${escapedPath}"`
         }
         return children
       }

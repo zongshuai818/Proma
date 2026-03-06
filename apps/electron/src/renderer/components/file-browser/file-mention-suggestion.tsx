@@ -8,6 +8,7 @@
 import type React from 'react'
 import { ReactRenderer } from '@tiptap/react'
 import type { SuggestionOptions } from '@tiptap/suggestion'
+import type { SuggestionProps } from '@tiptap/suggestion'
 import { FileMentionList } from './FileMentionList'
 import type { FileMentionRef } from './FileMentionList'
 import type { FileIndexEntry } from '@proma/shared'
@@ -28,7 +29,7 @@ export function createFileMentionSuggestion(
 ): Omit<SuggestionOptions<FileIndexEntry>, 'editor'> {
   return {
     char: '@',
-    allowSpaces: false,
+    allowSpaces: true,
 
     // 异步搜索文件
     items: async ({ query }): Promise<FileIndexEntry[]> => {
@@ -56,17 +57,38 @@ export function createFileMentionSuggestion(
     render: () => {
       let renderer: ReactRenderer<FileMentionRef> | null = null
       let popup: HTMLDivElement | null = null
+      // 保存当前 props 用于选择时获取 range
+      let currentProps: SuggestionProps<FileIndexEntry> | null = null
+
+      const handleSelect = (item: FileIndexEntry) => {
+        if (!currentProps) return
+        const { editor, range } = currentProps
+        // 使用明确的 range 替换查询文本为 mention 节点
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(range, [
+            {
+              type: 'mention',
+              attrs: { id: item.path, label: item.name },
+            },
+            {
+              type: 'text',
+              text: ' ',
+            },
+          ])
+          .run()
+      }
 
       return {
         onStart(props) {
           mentionActiveRef.current = true
+          currentProps = props
           renderer = new ReactRenderer(FileMentionList, {
             props: {
               items: props.items,
               selectedIndex: 0,
-              onSelect: (item: FileIndexEntry) => {
-                props.command({ id: item.path, label: item.name })
-              },
+              onSelect: handleSelect,
             },
             editor: props.editor,
           })
@@ -91,6 +113,7 @@ export function createFileMentionSuggestion(
         },
 
         onUpdate(props) {
+          currentProps = props
           renderer?.updateProps({ items: props.items })
 
           // 重新定位
