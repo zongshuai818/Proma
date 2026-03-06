@@ -32,6 +32,7 @@ import type {
   AgentSaveFilesInput,
   AgentSavedFile,
   AgentAttachDirectoryInput,
+  AgentAttachFileInput,
   GetTaskOutputInput,
   GetTaskOutputResult,
   StopTaskInput,
@@ -1008,6 +1009,24 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  // 打开文件选择对话框（返回文件路径，用于附加）
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.OPEN_FILE_DIALOG,
+    async (): Promise<string[] | null> => {
+      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+      if (!win) return null
+
+      const result = await dialog.showOpenDialog(win, {
+        properties: ['openFile', 'multiSelections'],
+        title: '选择文件',
+      })
+
+      if (result.canceled || result.filePaths.length === 0) return null
+
+      return result.filePaths
+    }
+  )
+
   // 打开文件夹选择对话框
   ipcMain.handle(
     AGENT_IPC_CHANNELS.OPEN_FOLDER_DIALOG,
@@ -1058,6 +1077,36 @@ export function registerIpcHandlers(): void {
       updateAgentSessionMeta(input.sessionId, { attachedDirectories: updated })
       // 停止附加目录文件监听
       unwatchAttachedDirectory(input.directoryPath)
+      return updated
+    }
+  )
+
+  // 附加外部文件到 Agent 会话
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.ATTACH_FILE,
+    async (_, input: AgentAttachFileInput): Promise<string[]> => {
+      const meta = getAgentSessionMeta(input.sessionId)
+      if (!meta) throw new Error(`会话不存在: ${input.sessionId}`)
+
+      const existing = meta.attachedFiles ?? []
+      if (existing.includes(input.filePath)) return existing
+
+      const updated = [...existing, input.filePath]
+      updateAgentSessionMeta(input.sessionId, { attachedFiles: updated })
+      return updated
+    }
+  )
+
+  // 移除会话的附加文件
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.DETACH_FILE,
+    async (_, input: AgentAttachFileInput): Promise<string[]> => {
+      const meta = getAgentSessionMeta(input.sessionId)
+      if (!meta) throw new Error(`会话不存在: ${input.sessionId}`)
+
+      const existing = meta.attachedFiles ?? []
+      const updated = existing.filter((f) => f !== input.filePath)
+      updateAgentSessionMeta(input.sessionId, { attachedFiles: updated })
       return updated
     }
   )
